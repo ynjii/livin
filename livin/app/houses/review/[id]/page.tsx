@@ -6,7 +6,7 @@ import Image from 'next/image';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import StarDisplay from '@/components/Dorm/StarDisplay';
 import EvaluationList from '@/components/Dorm/EvaluationList';
-import { getHouseReviewDetailApi } from '@apis/house';
+import { getHouseReviewDetailApi, deleteHouseReviewApi } from '@apis/house';
 import {
   createCommentApi,
   deleteCommentApi,
@@ -24,6 +24,7 @@ interface ReviewDetail {
   review: string;
   imageUrls: string[];
   anonym: boolean;
+  nickname?: string;
 }
 
 interface Comment {
@@ -43,8 +44,28 @@ export default function HouseDetailPage() {
   const [loading, setLoading] = useState(true);
   const [comments, setComments] = useState<Comment[]>([]);
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   const houseId = searchParams.get('houseId');
+
+  // 리뷰 삭제
+  const handleDeleteReview = async () => {
+    if (!confirm('리뷰를 삭제하시겠습니까?')) return;
+    
+    if (!houseId || !params.id) {
+      alert('리뷰 정보가 올바르지 않습니다.');
+      return;
+    }
+
+    try {
+      await deleteHouseReviewApi(Number(houseId), Number(params.id));
+      alert('리뷰가 삭제되었습니다.');
+      router.back();
+    } catch (error) {
+      console.error('리뷰 삭제 실패:', error);
+      alert('리뷰 삭제에 실패했습니다.');
+    }
+  };
 
   useEffect(() => {
     const fetchReviewDetail = async () => {
@@ -148,6 +169,11 @@ export default function HouseDetailPage() {
   const handleDeleteComment = async (commentId: number) => {
     if (!confirm('댓글을 삭제하시겠습니까?')) return;
 
+    if (!review) {
+      alert('리뷰 정보를 불러오지 못했습니다.');
+      return;
+    }
+
     try {
       const reviewId = Number(params.id);
       await deleteCommentApi(commentId);
@@ -179,31 +205,47 @@ export default function HouseDetailPage() {
         <ReviewCard>
           <ProfileSection>
             <ProfileImage
-              src={'/profile_gray.svg'}
+              src={'/profile_white.svg'}
               alt='프로필 이미지'
               width={50}
               height={50}
             />
             <ProfileInfo>
-              <NameSection>
-                <Name>익명</Name>
-              </NameSection>
+              <TopRow>
+                <NameSection>
+                  <Name>
+                    {review.anonym ? '익명' : review.nickname}
+                  </Name>
+                </NameSection>
+              </TopRow>
               <RatingRow>
                 <StarDisplay
                   stars={review.finalRate}
                   score={review.finalRate}
                   size='medium'
                 />
-                <DateText>2025.09.27</DateText>
+                <DateText>
+                  {new Date().toLocaleDateString('ko-KR')}
+                </DateText>
               </RatingRow>
             </ProfileInfo>
+            <DeleteButton onClick={handleDeleteReview}>
+              삭제
+            </DeleteButton>
           </ProfileSection>
 
-          <ImageSection>
-            {review.imageUrls.map((url, index) => (
-              <ImagePlaceholder key={index} />
-            ))}
-          </ImageSection>
+          {review.imageUrls && review.imageUrls.length > 0 && (
+            <ImageSection>
+              {review.imageUrls.map((url, index) => (
+                <ReviewImage
+                  key={index}
+                  src={url}
+                  alt={`리뷰 이미지 ${index + 1}`}
+                  onClick={() => setSelectedImage(url)}
+                />
+              ))}
+            </ImageSection>
+          )}
 
           <EvaluationList evaluations={{
             방음: review.soundRate,
@@ -276,6 +318,15 @@ export default function HouseDetailPage() {
           </InputRow>
         </CommentInputSection>
       </Container>
+      
+      {selectedImage && (
+        <ImageModal onClick={() => setSelectedImage(null)}>
+          <ModalContent onClick={(e) => e.stopPropagation()}>
+            <ModalImage src={selectedImage} alt="확대된 이미지" />
+            <CloseButton onClick={() => setSelectedImage(null)}>×</CloseButton>
+          </ModalContent>
+        </ImageModal>
+      )}
     </Wrapper>
   );
 }
@@ -346,6 +397,7 @@ const ProfileSection = styled.div`
   display: flex;
   gap: 12px;
   margin-bottom: 14px;
+  align-items: flex-start;
 `;
 
 const ProfileImage = styled(Image)`
@@ -361,6 +413,12 @@ const ProfileInfo = styled.div`
   display: flex;
   flex-direction: column;
   justify-content: center;
+  gap: 6px;
+`;
+
+const TopRow = styled.div`
+  display: flex;
+  align-items: center;
   gap: 6px;
 `;
 
@@ -391,6 +449,29 @@ const ImageSection = styled.div`
   display: flex;
   gap: 14px;
   margin-bottom: 18px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  
+  &::-webkit-scrollbar {
+    height: 1px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 1px;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 1px;
+    
+    &:hover {
+      background: #bbb;
+    }
+  }
+  
+  scrollbar-width: thin;
+  scrollbar-color: #ccc #f1f1f1;
 `;
 
 const ImagePlaceholder = styled.div`
@@ -605,6 +686,98 @@ const SubmitButton = styled.button`
 
   img {
     filter: brightness(0) invert(1);
+  }
+`;
+
+const DeleteButton = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 22px;
+  border-radius: 11px;
+  border: 1px solid #e8e8e8;
+  background: #fafafa;
+  font-size: 10px;
+  font-weight: 400;
+  color: #888;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-left: auto;
+  align-self: flex-start;
+
+  &:hover {
+    background: #f5f5f5;
+    border-color: #ddd;
+    color: #666;
+  }
+
+  &:active {
+    transform: scale(0.96);
+  }
+`;
+
+const ReviewImage = styled.img`
+  width: 120px;
+  height: 120px;
+  border-radius: 16px;
+  object-fit: cover;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: transform 0.2s;
+  
+  &:hover {
+    transform: scale(1.02);
+  }
+`;
+
+const ImageModal = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  cursor: pointer;
+`;
+
+const ModalContent = styled.div`
+  position: relative;
+  max-width: 90vw;
+  max-height: 90vh;
+  cursor: default;
+`;
+
+const ModalImage = styled.img`
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 8px;
+`;
+
+const CloseButton = styled.button`
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: white;
+  border: none;
+  font-size: 18px;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  
+  &:hover {
+    background: #f0f0f0;
   }
 `;
 

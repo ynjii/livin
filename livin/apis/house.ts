@@ -41,8 +41,8 @@ export const getHouseReviewDetailApi = async (
 
 // 자취/하숙 리뷰 삭제
 export const deleteHouseReviewApi = async (
-  house_id: string | number,
-  review_id: string | number
+  house_id: number,
+  review_id: number
 ) => {
   const res = await axiosInstance.delete(
     `/house/${house_id}/review/${review_id}`

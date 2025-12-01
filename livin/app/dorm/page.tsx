@@ -20,32 +20,58 @@ export default function DormPage() {
   const [reviews, setReviews] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
+  // 건물별 동 매핑
+  const buildingToDongs: Record<string, string[]> = {
+    'E-House': ['201동', '202동', '203동', '204동', '301동', '302동', '303동', '304동'],
+    '한우리집': ['101동', '102동', '103동'],
+    'I-House': ['A동', 'B동', 'C동', 'D동']
+  };
+
+  // 현재 선택된 건물에 따른 동 목록
+  const getAvailableDongs = () => {
+    if (selectedBuilding && buildingToDongs[selectedBuilding]) {
+      return buildingToDongs[selectedBuilding];
+    }
+    // 건물이 선택되지 않았으면 모든 동 표시
+    return Object.values(buildingToDongs).flat();
+  };
+
   // 리뷰 목록 조회
   const fetchReviews = async () => {
     try {
       setIsLoading(true);
       
-      // 전체 목록 조회 (검색어 있으면 필터링)
-      const data = await getDormReviewsApi();
+      const params: {
+        buildName?: string;
+        buildNum?: string;
+        minFinalRate?: number;
+      } = {};
+      
+      // 검색어가 있으면 buildName으로 검색
+      if (searchText.trim()) {
+        params.buildName = searchText.trim();
+      }
+      
+      // 선택된 목록 필터링 적용
+      if (selectedBuilding) {
+        params.buildName = selectedBuilding;
+      }
+      
+      if (selectedDong) {
+        params.buildNum = selectedDong;
+      }
+      
+      if (selectedRating > 0) {
+        params.minFinalRate = selectedRating;
+      }
+      
+      const data = await getDormReviewsApi(params);
       console.log('API Response:', data);
-      console.log('Response type:', typeof data);
-      console.log('Is array:', Array.isArray(data));
+      console.log('API Params:', params);
       
       if (Array.isArray(data)) {
-        let filteredReviews = data;
-        
-        // 검색어가 있으면 필터링
-        if (searchText.trim()) {
-          filteredReviews = data.filter(review => 
-            review.buildName?.toLowerCase().includes(searchText.toLowerCase()) ||
-            review.buildNum?.toLowerCase().includes(searchText.toLowerCase()) ||
-            review.nickname?.toLowerCase().includes(searchText.toLowerCase()) ||
-            review.roomPeople?.toString().includes(searchText)
-          );
-        }
-        
-        setReviews(filteredReviews);
-        console.log('Reviews loaded:', filteredReviews.length);
+        setReviews(data);
+        console.log('Reviews loaded:', data.length);
       } else {
         console.log('Unexpected data structure:', data);
         setReviews([]);
@@ -66,16 +92,14 @@ export default function DormPage() {
     fetchReviews();
   }, []);
   
-  // 검색어 변경 시 자동 검색
+  // 필터나 검색어 변경 시 자동 검색
   useEffect(() => {
     const delayedSearch = setTimeout(() => {
-      if (searchText.trim() !== '') {
-        fetchReviews();
-      }
-    }, 500);
+      fetchReviews();
+    }, 300);
     
     return () => clearTimeout(delayedSearch);
-  }, [searchText]);
+  }, [searchText, selectedBuilding, selectedDong, selectedRating]);
 
   const handleSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
@@ -85,7 +109,6 @@ export default function DormPage() {
   
   const handleClearSearch = () => {
     setSearchText('');
-    fetchReviews();
   };
 
   return (
@@ -180,11 +203,12 @@ export default function DormPage() {
                     <OptionButton
                       key={building}
                       $selected={selectedBuilding === building}
-                      onClick={() =>
-                        setSelectedBuilding(
-                          building === selectedBuilding ? '' : building
-                        )
-                      }
+                      onClick={() => {
+                        const newBuilding = building === selectedBuilding ? '' : building;
+                        setSelectedBuilding(newBuilding);
+                        // 건물 변경 시 동 선택 초기화
+                        setSelectedDong('');
+                      }}
                     >
                       {building}
                     </OptionButton>
@@ -210,7 +234,7 @@ export default function DormPage() {
               <FilterPopupFloating $alignRight>
                 <PopupTitle>기숙사 동</PopupTitle>
                 <OptionGrid>
-                  {['101동', '102동', '103동', '104동', 'A동', 'B동'].map(
+                  {getAvailableDongs().map(
                     (dong) => (
                       <OptionButton
                         key={dong}

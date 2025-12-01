@@ -48,6 +48,7 @@ export default function DormDetailPage() {
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   const loadReviewData = async () => {
     try {
@@ -154,9 +155,7 @@ export default function DormDetailPage() {
             />
           </BackButton>
           <Title>리뷰 상세 조회</Title>
-          <DeleteButton onClick={handleDeleteReview}>
-            <Image src='/trash.svg' alt='삭제' width={16} height={16} />
-          </DeleteButton>
+          <Spacer />
         </Header>
 
         <ReviewCard>
@@ -193,6 +192,9 @@ export default function DormDetailPage() {
                 </DateText>
               </RatingRow>
             </ProfileInfo>
+            <DeleteButton onClick={handleDeleteReview}>
+              삭제
+            </DeleteButton>
           </ProfileSection>
 
           {review.imageUrls && review.imageUrls.length > 0 && (
@@ -202,6 +204,7 @@ export default function DormDetailPage() {
                   key={index}
                   src={url}
                   alt={`리뷰 이미지 ${index + 1}`}
+                  onClick={() => setSelectedImage(url)}
                 />
               ))}
             </ImageSection>
@@ -286,6 +289,15 @@ export default function DormDetailPage() {
           </InputRow>
         </CommentInputSection>
       </Container>
+      
+      {selectedImage && (
+        <ImageModal onClick={() => setSelectedImage(null)}>
+          <ModalContent onClick={(e) => e.stopPropagation()}>
+            <ModalImage src={selectedImage} alt="확대된 이미지" />
+            <CloseButton onClick={() => setSelectedImage(null)}>×</CloseButton>
+          </ModalContent>
+        </ImageModal>
+      )}
     </Wrapper>
   );
 }
@@ -337,18 +349,30 @@ const Spacer = styled.div`
 `;
 
 const DeleteButton = styled.button`
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 4px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 4px;
-  transition: background-color 0.2s;
+  width: 36px;
+  height: 22px;
+  border-radius: 11px;
+  border: 1px solid #e8e8e8;
+  background: #fafafa;
+  font-size: 10px;
+  font-weight: 400;
+  color: #888;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-left: auto;
+  align-self: flex-start;
 
   &:hover {
-    background-color: #f5f5f5;
+    background: #f5f5f5;
+    border-color: #ddd;
+    color: #666;
+  }
+
+  &:active {
+    transform: scale(0.96);
   }
 `;
 
@@ -366,14 +390,6 @@ const EmptyComment = styled.div`
   color: #999;
 `;
 
-const ReviewImage = styled.img`
-  width: 120px;
-  height: 120px;
-  border-radius: 16px;
-  object-fit: cover;
-  flex-shrink: 0;
-`;
-
 const ReviewCard = styled.div`
   background: #fff;
   border-radius: 0;
@@ -386,6 +402,7 @@ const ProfileSection = styled.div`
   display: flex;
   gap: 12px;
   margin-bottom: 14px;
+  align-items: flex-start;
 `;
 
 const ProfileImage = styled(Image)`
@@ -453,22 +470,80 @@ const DateText = styled.span`
 
 const ImageSection = styled.div`
   display: flex;
-  gap: 14px;
+  gap: 8px;
   margin-bottom: 18px;
   overflow-x: auto;
-
+  padding-bottom: 4px;
+  
   &::-webkit-scrollbar {
-    height: 6px;
+    display: none;
   }
+  
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+`;
 
-  &::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 3px;
+const ReviewImage = styled.img`
+  width: 120px;
+  height: 120px;
+  border-radius: 16px;
+  object-fit: cover;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: transform 0.2s;
+  
+  &:hover {
+    transform: scale(1.02);
   }
+`;
 
-  &::-webkit-scrollbar-thumb {
-    background: #ccc;
-    border-radius: 3px;
+const ImageModal = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  cursor: pointer;
+`;
+
+const ModalContent = styled.div`
+  position: relative;
+  max-width: 90vw;
+  max-height: 90vh;
+  cursor: default;
+`;
+
+const ModalImage = styled.img`
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 8px;
+`;
+
+const CloseButton = styled.button`
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: white;
+  border: none;
+  font-size: 18px;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  
+  &:hover {
+    background: #f0f0f0;
   }
 `;
 

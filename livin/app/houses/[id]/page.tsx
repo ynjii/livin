@@ -226,6 +226,11 @@ export default function BuildingDetailPage() {
                       `/houses/review/${review.id}?houseId=${params.id}`
                     )
                   }
+                  thumbnailUrl={
+                    Array.isArray(review.imageUrls) && review.imageUrls[0]
+                      ? review.imageUrls[0]
+                      : undefined
+                  }
                 />
               ))
             ) : (

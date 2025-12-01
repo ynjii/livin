@@ -17,6 +17,7 @@ interface HouseReviewCardProps {
     벌레: string;
   };
   onClick?: () => void;
+  thumbnailUrl?: string;
 }
 
 export default function HouseReviewCard({
@@ -27,10 +28,15 @@ export default function HouseReviewCard({
   tags,
   evaluations,
   onClick,
+  thumbnailUrl,
 }: HouseReviewCardProps) {
   return (
     <Card onClick={onClick}>
-      <Skeleton />
+      {thumbnailUrl ? (
+        <ThumbnailImage src={thumbnailUrl} alt="리뷰 이미지" />
+      ) : (
+        <Skeleton />
+      )}
       <Info>
         <TopRow>
           <NameSection>
@@ -76,6 +82,14 @@ const Skeleton = styled.div`
   flex-shrink: 0;
   border-radius: 10px;
   background: #d9d9d9;
+`;
+
+const ThumbnailImage = styled.img`
+  width: 70px;
+  height: 70px;
+  flex-shrink: 0;
+  border-radius: 10px;
+  object-fit: cover;
 `;
 
 const Info = styled.div`
